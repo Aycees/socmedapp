@@ -1,9 +1,13 @@
-import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  HttpStatus,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { HttpException } from '@nestjs/common/exceptions/http.exception';
-import bcrypt from 'bcrypt';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -42,9 +46,8 @@ export class UsersService {
       });
 
       return newUser;
-
     } catch (error) {
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new InternalServerErrorException(error.message);
     }
   }
 
@@ -52,35 +55,33 @@ export class UsersService {
     try {
       const allUsers = await this.prismaService.user.findMany({
         where: {
-          isArchived: false
+          isArchived: false,
         },
-        select: this.userPublicSelect
+        select: this.userPublicSelect,
       });
-
-      if (!allUsers) {
-        throw new HttpException('No users found', HttpStatus.NOT_FOUND);
-      }
-
       return allUsers;
-
     } catch (error) {
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new InternalServerErrorException(error.message);
     }
   }
 
   async findOne(id: string) {
-      const findUser = await this.prismaService.user.findUnique({
-        where: {
-          id,
-        },
-        select: this.userPublicSelect
+    try {
+      const findUser = await this.prismaService.user.findUniqueOrThrow({
+        where: { id, isArchived: false },
+        select: this.userPublicSelect,
       });
 
       if (!findUser) {
-        throw new NotFoundException('User not found')
+        throw new NotFoundException('User not found');
       }
-
       return findUser;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(error.message);
+    }
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
@@ -92,39 +93,39 @@ export class UsersService {
           ...userData,
           ...(roleId && {
             role: {
-              connect: { id: roleId }
-            }
-          })
+              connect: { id: roleId },
+            },
+          }),
         },
-        select: this.userPublicSelect
+        select: this.userPublicSelect,
       });
 
       return updateUser;
-
     } catch (error) {
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new InternalServerErrorException(error.message);
     }
   }
 
   async archive(id: string) {
     try {
-      const user = await this.findOne(id);
-      const { isArchived, roleId, ...userData } = user;
-      
+      await this.findOne(id);
+
       const archiveUser = await this.prismaService.user.update({
         where: {
           id,
         },
         data: {
-          ...userData,
-          isArchived: !isArchived,
+          isArchived: true,
         },
-        select: this.userPublicSelect
+        select: this.userPublicSelect,
       });
-      
+
       return archiveUser;
     } catch (error) {
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(error.message);
     }
   }
 }
