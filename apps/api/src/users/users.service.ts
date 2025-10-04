@@ -15,7 +15,7 @@ export class UsersService {
     email: true,
     name: true,
     bio: true,
-    role: true,
+    roleId: true,
     avatarUrl: true,
     isArchived: true,
     createdAt: true,
@@ -27,15 +27,21 @@ export class UsersService {
       const salt = await bcrypt.genSalt(10);
       const password = await bcrypt.hash(createUserDto.password, salt);
 
+      const { roleId, ...userData } = createUserDto;
       const newUser = await this.prismaService.user.create({
         data: {
-          createUserDto,
-          password,
+          ...userData,
+          password: password,
+          role: {
+            connect: {
+              id: roleId,
+            },
+          },
         },
         select: this.userPublicSelect,
       });
 
-      return newUser
+      return newUser;
 
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -79,14 +85,19 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     try {
+      const { roleId, ...userData } = updateUserDto;
       const updateUser = await this.prismaService.user.update({
-        where: {
-          id,
-        },
+        where: { id },
         data: {
-          updateUserDto
-        }
-      })
+          ...userData,
+          ...(roleId && {
+            role: {
+              connect: { id: roleId }
+            }
+          })
+        },
+        select: this.userPublicSelect
+      });
 
       return updateUser;
 
@@ -98,7 +109,7 @@ export class UsersService {
   async archive(id: string) {
     try {
       const user = await this.findOne(id);
-      const { isArchived, ...userData } = user.data;
+      const { isArchived, roleId, ...userData } = user;
       
       const archiveUser = await this.prismaService.user.update({
         where: {
@@ -107,9 +118,11 @@ export class UsersService {
         data: {
           ...userData,
           isArchived: !isArchived,
-        }
-      })
+        },
+        select: this.userPublicSelect
+      });
       
+      return archiveUser;
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
