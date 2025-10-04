@@ -1,4 +1,4 @@
-import { HttpException, Injectable, HttpStatus } from '@nestjs/common';
+import { HttpException, Injectable, HttpStatus, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -15,9 +15,9 @@ export class RolesService {
         }
       })
 
-      return newRole
+      return newRole;
     } catch (error) {
-      console.error(error)
+      throw new InternalServerErrorException(error.message);
     };
   }
 
@@ -28,14 +28,9 @@ export class RolesService {
           isArchived: false
         }
       })
-
-      if (!roles) {
-        throw new HttpException('No roles found', HttpStatus.NOT_FOUND);
-      }
-
       return roles;
     } catch (error) {
-      console.error(error)
+      throw new InternalServerErrorException(error.message);
     };
   }
 
@@ -47,13 +42,17 @@ export class RolesService {
           isArchived: false 
         }
       })
+
       if (!role) {
-        throw new HttpException('Role not found', HttpStatus.NOT_FOUND);
+        throw new NotFoundException('Role not found');
       }
 
       return role;
     } catch (error) {
-      console.error(error)
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(error.message);
     }
   }
 
@@ -67,21 +66,25 @@ export class RolesService {
       return updatedRole;
 
     } catch (error) {
-      console.error(error)
+      throw new InternalServerErrorException(error.message);
     }
   }
 
   async archive(id: string) {
     try {
+      await this.findOne(id);
+
       const archivedRole = await this.prismaService.role.update({
         where: { id },
         data: { isArchived: true }
       })
 
       return archivedRole;
-      
     } catch (error) {
-      console.error(error)
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(error.message);
     }
   }
 }
