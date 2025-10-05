@@ -23,7 +23,7 @@ model User {
   bio        String?
   avatarUrl  String?
   roleId     String
-  isArchived Boolean
+  isArchived Boolean  @default(false)
   role       Role     @relation(fields: [roleId], references: [id])
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -40,7 +40,7 @@ model Role {
   id          String   @id @default(cuid())
   name        String   @unique
   description String?
-  isArchived  Boolean
+  isArchived  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -52,7 +52,7 @@ model Post {
   content    String
   userId     String
   user       User     @relation(fields: [userId], references: [id])
-  isArchived Boolean
+  isArchived Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -69,7 +69,7 @@ model Comment {
   user       User     @relation(fields: [userId], references: [id])
   postId     String
   post       Post     @relation(fields: [postId], references: [id])
-  isArchived Boolean
+  isArchived Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
