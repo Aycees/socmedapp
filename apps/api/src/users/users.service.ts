@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   HttpStatus,
   Injectable,
   InternalServerErrorException,
@@ -28,6 +29,11 @@ export class UsersService {
 
   async create(createUserDto: CreateUserDto) {
     try {
+      await Promise.all([
+        this.isUsernameTaken(createUserDto.username),
+        this.isEmailRegistered(createUserDto.email)
+      ]);
+
       const salt = await bcrypt.genSalt(10);
       const password = await bcrypt.hash(createUserDto.password, salt);
 
@@ -47,6 +53,9 @@ export class UsersService {
 
       return newUser;
     } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
       throw new InternalServerErrorException(error.message);
     }
   }
@@ -128,5 +137,31 @@ export class UsersService {
       throw new InternalServerErrorException(error.message);
     }
   }
+
+  private async isUsernameTaken(username: string): Promise<void> {
+    const existingUser = await this.prismaService.user.findFirst({
+      where: {
+        username,
+        isArchived: false
+      }
+    });
+
+    if (existingUser) {
+      throw new ConflictException('Username is already taken');
+    }
+  }
   
+  private async isEmailRegistered(email: string): Promise<void> {
+    const existingUser = await this.prismaService.user.findFirst({
+      where: {
+        email,
+        isArchived: false
+      }
+    });
+
+    if (existingUser) {
+      throw new ConflictException('Email is already registered');
+    }
+  }
+
 }
