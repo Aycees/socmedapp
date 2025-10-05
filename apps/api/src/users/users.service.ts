@@ -1,14 +1,15 @@
 import {
   ConflictException,
-  HttpStatus,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Injectable()
 export class UsersService {
@@ -31,7 +32,7 @@ export class UsersService {
     try {
       await Promise.all([
         this.isUsernameTaken(createUserDto.username),
-        this.isEmailRegistered(createUserDto.email)
+        this.isEmailRegistered(createUserDto.email),
       ]);
 
       const salt = await bcrypt.genSalt(10);
@@ -95,6 +96,10 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     try {
+      if (updateUserDto.username) {
+        await this.isUsernameTaken(updateUserDto.username);
+      }
+
       const { roleId, ...userData } = updateUserDto;
       const updateUser = await this.prismaService.user.update({
         where: { id },
@@ -138,30 +143,62 @@ export class UsersService {
     }
   }
 
+async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
+  try {
+    const user = await this.prismaService.user.findUniqueOrThrow({
+      where: { id },
+      select: { password: true }
+    });
+
+    const isPasswordValid = await bcrypt.compare(
+      updatePasswordDto.currentPassword,
+      user.password
+    );
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(updatePasswordDto.newPassword, salt);
+
+    await this.prismaService.user.update({
+      where: { id },
+      data: { password: hashedPassword }
+    });
+
+    return { message: 'Password updated successfully' };
+  } catch (error) {
+    if (error instanceof UnauthorizedException) {
+      throw error;
+    }
+    throw new InternalServerErrorException(error.message);
+  }
+}
+
   private async isUsernameTaken(username: string): Promise<void> {
     const existingUser = await this.prismaService.user.findFirst({
       where: {
         username,
-        isArchived: false
-      }
+        isArchived: false,
+      },
     });
 
     if (existingUser) {
       throw new ConflictException('Username is already taken');
     }
   }
-  
+
   private async isEmailRegistered(email: string): Promise<void> {
     const existingUser = await this.prismaService.user.findFirst({
       where: {
         email,
-        isArchived: false
-      }
+        isArchived: false,
+      },
     });
 
     if (existingUser) {
       throw new ConflictException('Email is already registered');
     }
   }
-
 }
