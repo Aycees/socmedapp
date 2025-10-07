@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -6,20 +10,24 @@ import { PrismaService } from 'src/prisma/prisma.service';
 @Injectable()
 export class PostsService {
   constructor(private readonly prismaService: PrismaService) {}
+
   async create(createPostDto: CreatePostDto) {
     try {
+      const { userId, images = [], ...postData } = createPostDto;
 
-      const { userId, ...postData } = createPostDto;
       const post = await this.prismaService.post.create({
         data: {
           ...postData,
-          user: {
-            connect: {
-              id: userId
-            },
-          },
+          user: { connect: { id: userId } },
+          ...(images.length
+            ? {
+                images: {
+                  create: images.map((url) => ({ imageUrl: url })),
+                },
+              }
+            : {}),
         },
-      }) ;
+      });
 
       return post;
     } catch (error) {
@@ -30,16 +38,16 @@ export class PostsService {
   async findAll() {
     try {
       const allPosts = await this.prismaService.post.findMany({
-        where: { isArchived: false},
+        where: { isArchived: false },
         include: {
           user: {
             select: {
               id: true,
               username: true,
-              avatarUrl: true
-            }
-          }
-        }
+              avatarUrl: true,
+            },
+          },
+        },
       });
 
       return allPosts;
@@ -55,7 +63,7 @@ export class PostsService {
       });
 
       if (!findPost) {
-        throw new NotFoundException('Post not found')
+        throw new NotFoundException('Post not found');
       }
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -65,19 +73,18 @@ export class PostsService {
     }
   }
 
-  async update(id: string, updatePostDto: UpdatePostDto) {
-    try {
-      const updatedPost = await this.prismaService.post.update({
-        where: { id, isArchived: false },
-        data: { ...updatePostDto }
-      })
+  // async update(id: string, updatePostDto: UpdatePostDto) {
+  //   try {
+  //     const updatedPost = await this.prismaService.post.update({
+  //       where: { id, isArchived: false },
+  //       data: { ...updatePostDto },
+  //     });
 
-      return updatedPost;
-
-    } catch (error) {
-      throw new InternalServerErrorException(error.message);
-    }
-  }
+  //     return updatedPost;
+  //   } catch (error) {
+  //     throw new InternalServerErrorException(error.message);
+  //   }
+  // }
 
   async archive(id: string) {
     try {
@@ -86,9 +93,9 @@ export class PostsService {
       const archivePost = await this.prismaService.post.update({
         where: { id },
         data: {
-          isArchived: true
-        }
-      })
+          isArchived: true,
+        },
+      });
 
       return archivePost;
     } catch (error) {
@@ -106,9 +113,9 @@ export class PostsService {
       const unarchivePost = await this.prismaService.post.update({
         where: { id },
         data: {
-          isArchived: false
-        }
-      })
+          isArchived: false,
+        },
+      });
 
       return unarchivePost;
     } catch (error) {

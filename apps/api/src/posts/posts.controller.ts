@@ -22,10 +22,10 @@ export class PostsController {
     return this.postsService.findOne(id);
   }
 
-  @Patch('update/:id')
-  update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
-    return this.postsService.update(id, updatePostDto);
-  }
+  // @Patch('update/:id')
+  // update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
+  //   return this.postsService.update(id, updatePostDto);
+  // }
 
   @Patch('archive/:id')
   archive(@Param('id') id: string) {

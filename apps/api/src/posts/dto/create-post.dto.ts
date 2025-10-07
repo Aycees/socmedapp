@@ -1,16 +1,19 @@
-import { IsNotEmpty, IsString } from "class-validator";
+import { ArrayMaxSize, IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreatePostDto {
+  @IsNotEmpty()
+  @IsString()
+  title: string;
 
-    @IsNotEmpty()
-    @IsString()
-    title: string;
-    
-    @IsNotEmpty()
-    @IsString()
-    content: string;
+  @IsNotEmpty()
+  @IsString()
+  content: string;
 
-    @IsString()
-    userId: string;
-    
+  @IsString()
+  userId: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5, {message: "You can only upload up to five images." }) 
+  images?: string[];
 }
