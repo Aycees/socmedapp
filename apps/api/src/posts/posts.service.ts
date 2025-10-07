@@ -51,7 +51,7 @@ export class PostsService {
   async findOne(id: string) {
     try {
       const findPost = await this.prismaService.post.findUniqueOrThrow({
-        where: { id, isArchived: false },
+        where: { id },
       });
 
       if (!findPost) {
@@ -103,14 +103,14 @@ export class PostsService {
     try {
       await this.findOne(id);
 
-      const archivePost = await this.prismaService.post.update({
+      const unarchivePost = await this.prismaService.post.update({
         where: { id },
         data: {
           isArchived: false
         }
       })
 
-      return archivePost;
+      return unarchivePost;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
