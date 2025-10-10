@@ -27,6 +27,9 @@ export class PostsService {
               }
             : {}),
         },
+        include: {
+          images: true,
+        },
       });
 
       return post;
@@ -47,6 +50,7 @@ export class PostsService {
               avatarUrl: true,
             },
           },
+          images: true,
         },
       });
 
@@ -60,11 +64,23 @@ export class PostsService {
     try {
       const findPost = await this.prismaService.post.findUniqueOrThrow({
         where: { id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+          images: true,
+        },
       });
 
       if (!findPost) {
         throw new NotFoundException('Post not found');
       }
+
+      return findPost;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
