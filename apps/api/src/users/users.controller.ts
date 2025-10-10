@@ -31,4 +31,9 @@ export class UsersController {
   archive(@Param('id') id: string) {
     return this.usersService.archive(id);
   }
+
+  @Patch('unarchive/:id')
+  unarchive(@Param('id') id: string) {
+    return this.usersService.unarchive(id);
+  }
 }

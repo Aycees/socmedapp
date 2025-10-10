@@ -78,7 +78,7 @@ export class UsersService {
   async findOne(id: string) {
     try {
       const findUser = await this.prismaService.user.findUniqueOrThrow({
-        where: { id, isArchived: false },
+        where: { id }, 
         select: this.userPublicSelect,
       });
 
@@ -143,38 +143,65 @@ export class UsersService {
     }
   }
 
-async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
-  try {
-    const user = await this.prismaService.user.findUniqueOrThrow({
-      where: { id },
-      select: { password: true }
-    });
+  async unarchive(id: string) {
+    try {
+      await this.findOne(id);
 
-    const isPasswordValid = await bcrypt.compare(
-      updatePasswordDto.currentPassword,
-      user.password
-    );
+      const archiveUser = await this.prismaService.user.update({
+        where: {
+          id,
+        },
+        data: {
+          isArchived: false,
+        },
+        select: this.userPublicSelect,
+      });
 
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Current password is incorrect');
+      return archiveUser;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(error.message);
     }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(updatePasswordDto.newPassword, salt);
-
-    await this.prismaService.user.update({
-      where: { id },
-      data: { password: hashedPassword }
-    });
-
-    return { message: 'Password updated successfully' };
-  } catch (error) {
-    if (error instanceof UnauthorizedException) {
-      throw error;
-    }
-    throw new InternalServerErrorException(error.message);
   }
-}
+
+
+  async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
+    try {
+      const user = await this.prismaService.user.findUniqueOrThrow({
+        where: { id },
+        select: { password: true },
+      });
+
+      const isPasswordValid = await bcrypt.compare(
+        updatePasswordDto.currentPassword,
+        user.password,
+      );
+
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Current password is incorrect');
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(
+        updatePasswordDto.newPassword,
+        salt,
+      );
+
+      await this.prismaService.user.update({
+        where: { id },
+        data: { password: hashedPassword },
+      });
+
+      return { message: 'Password updated successfully' };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(error.message);
+    }
+  }
 
   private async isUsernameTaken(username: string): Promise<void> {
     const existingUser = await this.prismaService.user.findFirst({
