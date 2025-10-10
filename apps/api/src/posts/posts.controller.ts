@@ -9,13 +9,13 @@ export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post('create')
-  @UseInterceptors(FilesInterceptor('images', 5))
+  @UseInterceptors(FilesInterceptor('newImages', 5))
   create(
     @Body() createPostDto: CreatePostDto,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
     if (files && files.length > 0) {
-      createPostDto.images = files.map((file) => file.path);
+      createPostDto.newImages = files.map((file) => file.path);
     }
     return this.postsService.create(createPostDto);
   }
@@ -30,10 +30,16 @@ export class PostsController {
     return this.postsService.findOne(id);
   }
 
-  // @Patch('update/:id')
-  // update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
-  //   return this.postsService.update(id, updatePostDto);
-  // }
+  @Patch('update/:id')
+  @UseInterceptors(FilesInterceptor('newImages', 5))
+  update(
+    @Param('id') id: string, 
+    @Body() updatePostDto: UpdatePostDto,
+    @UploadedFiles() newImages: Express.Multer.File[],
+  ) {
+
+    return this.postsService.update(id, updatePostDto, newImages);
+  }
 
   @Patch('archive/:id')
   archive(@Param('id') id: string) {

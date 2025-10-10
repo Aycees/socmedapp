@@ -15,5 +15,5 @@ export class CreatePostDto {
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(5, {message: "You can only upload up to five images." }) 
-  images?: string[];
+  newImages?: string[];
 }

@@ -13,16 +13,16 @@ export class PostsService {
 
   async create(createPostDto: CreatePostDto) {
     try {
-      const { userId, images = [], ...postData } = createPostDto;
+      const { userId, newImages = [], ...postData } = createPostDto;
 
       const post = await this.prismaService.post.create({
         data: {
           ...postData,
           user: { connect: { id: userId } },
-          ...(images.length
+          ...(newImages.length
             ? {
                 images: {
-                  create: images.map((url) => ({ imageUrl: url })),
+                  create: newImages.map((url) => ({ imageUrl: url })),
                 },
               }
             : {}),
@@ -89,18 +89,48 @@ export class PostsService {
     }
   }
 
-  // async update(id: string, updatePostDto: UpdatePostDto) {
-  //   try {
-  //     const updatedPost = await this.prismaService.post.update({
-  //       where: { id, isArchived: false },
-  //       data: { ...updatePostDto },
-  //     });
+  async update(
+    id: string,
+    updatePostDto: UpdatePostDto,
+    newImages: Express.Multer.File[],
+  ) {
+    try {
+      await this.findOne(id);
 
-  //     return updatedPost;
-  //   } catch (error) {
-  //     throw new InternalServerErrorException(error.message);
-  //   }
-  // }
+      const { deleteImageIds = [], ...postData } = updatePostDto;
+
+      // Use interactive transaction for mixed model operations
+      await this.prismaService.$transaction(async (tx) => {
+        if (deleteImageIds.length > 0) {
+          await tx.image.deleteMany({
+            where: { id: { in: deleteImageIds } },
+          });
+        }
+        if (newImages && newImages.length > 0) {
+          await tx.image.createMany({
+            data: newImages.map((file) => ({
+              imageUrl: file.path,
+              postId: id,
+            })),
+          });
+        }
+        await tx.post.update({
+          where: { id, isArchived: false },
+          data: { ...postData },
+        });
+        return tx.post.findUniqueOrThrow({
+          where: { id },
+          include: { images: true },
+        });
+      });
+      return await this.findOne(id);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(error.message);
+    }
+  }
 
   async archive(id: string) {
     try {
