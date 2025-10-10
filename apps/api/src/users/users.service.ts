@@ -78,7 +78,7 @@ export class UsersService {
   async findOne(id: string) {
     try {
       const findUser = await this.prismaService.user.findUniqueOrThrow({
-        where: { id }, // remove isArchived
+        where: { id }, 
         select: this.userPublicSelect,
       });
 
