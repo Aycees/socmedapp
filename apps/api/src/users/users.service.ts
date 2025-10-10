@@ -78,7 +78,7 @@ export class UsersService {
   async findOne(id: string) {
     try {
       const findUser = await this.prismaService.user.findUniqueOrThrow({
-        where: { id, isArchived: false }, // remove isArchived
+        where: { id }, // remove isArchived
         select: this.userPublicSelect,
       });
 
@@ -143,7 +143,29 @@ export class UsersService {
     }
   }
 
-  // insert unarchive function
+  async unarchive(id: string) {
+    try {
+      await this.findOne(id);
+
+      const archiveUser = await this.prismaService.user.update({
+        where: {
+          id,
+        },
+        data: {
+          isArchived: false,
+        },
+        select: this.userPublicSelect,
+      });
+
+      return archiveUser;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(error.message);
+    }
+  }
+
 
   async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
     try {
