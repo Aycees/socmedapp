@@ -1,14 +1,22 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post('create')
-  create(@Body() createUserDto: CreateUserDto) {
+  @UseInterceptors(FileInterceptor('avatarUrl'))
+  create(
+    @Body() createUserDto: CreateUserDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (file) {
+      createUserDto.avatarUrl = file.path;
+    }
     return this.usersService.create(createUserDto);
   }
 

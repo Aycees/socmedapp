@@ -38,11 +38,12 @@ export class UsersService {
       const salt = await bcrypt.genSalt(10);
       const password = await bcrypt.hash(createUserDto.password, salt);
 
-      const { roleId, ...userData } = createUserDto;
+      const { roleId, avatarUrl, ...userData } = createUserDto;
       const newUser = await this.prismaService.user.create({
         data: {
           ...userData,
           password: password,
+          ...(avatarUrl && { avatarUrl }),
           role: {
             connect: {
               id: roleId,
