@@ -95,28 +95,48 @@ export class UsersService {
     }
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
+  async update(id: string, updateUserDto: UpdateUserDto, file?: Express.Multer.File) {
     try {
+      const existingUser = await this.findOne(id);
+
       if (updateUserDto.username) {
         await this.isUsernameTaken(updateUserDto.username);
       }
 
-      const { roleId, ...userData } = updateUserDto;
-      const updateUser = await this.prismaService.user.update({
-        where: { id },
-        data: {
-          ...userData,
-          ...(roleId && {
-            role: {
-              connect: { id: roleId },
-            },
-          }),
-        },
-        select: this.userPublicSelect,
-      });
+      const { roleId, removeAvatar, ...userData } = updateUserDto;
 
-      return updateUser;
+      const updatedUser = await this.prismaService.$transaction(async (tx) => {
+        if (updateUserDto.removeAvatar && existingUser.avatarUrl) {
+          await this.deleteFile(existingUser.avatarUrl);
+          userData.avatarUrl = null;
+        }
+
+        if (file) {
+          if (existingUser.avatarUrl) {
+            await this.deleteFile(existingUser.avatarUrl);
+          }
+          userData.avatarUrl = file?.path;
+        }
+
+        return await tx.user.update({
+          where: { id },
+          data: {
+            ...userData,
+            ...(roleId && {
+              role: {
+                connect: { id: roleId }
+              },
+            }),
+          },
+          select: this.userPublicSelect
+        });
+      });
+      
+      return updatedUser;
     } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ConflictException) {
+        throw error;
+      }
       throw new InternalServerErrorException(error.message);
     }
   }
@@ -229,4 +249,14 @@ export class UsersService {
       throw new ConflictException('Email is already registered');
     }
   }
+
+  private async deleteFile(filePath: string) {
+  try {
+    const fs = await import('fs/promises');
+    await fs.unlink(filePath);
+  } catch (err) {
+    console.warn(`Failed to delete old file: ${filePath}`, err);
+  }
+}
+
 }
