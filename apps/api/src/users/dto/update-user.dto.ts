@@ -1,4 +1,5 @@
-import { IsOptional, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class UpdateUserDto {
   @IsOptional()
@@ -14,11 +15,15 @@ export class UpdateUserDto {
   bio?: string;
 
   @IsOptional()
-  @IsString()
-  avatarUrl?: string;
+  avatarUrl?: string | null;
 
   @IsOptional()
   @IsString()
   roleId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === true || value === 'true')
+  removeAvatar?: boolean;
 }
 
