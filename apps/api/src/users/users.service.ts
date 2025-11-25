@@ -68,7 +68,15 @@ export class UsersService {
         where: {
           isArchived: false,
         },
-        select: this.userPublicSelect,
+        select: {
+          ...this.userPublicSelect,
+          role: {
+            select: {
+              id: true,
+              name: true,
+            }
+          }
+        }
       });
       return allUsers;
     } catch (error) {
