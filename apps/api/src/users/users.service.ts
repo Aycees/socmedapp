@@ -10,6 +10,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { UserType } from 'generated/prisma';
 
 @Injectable()
 export class UsersService {
@@ -21,7 +22,7 @@ export class UsersService {
     email: true,
     name: true,
     bio: true,
-    roleId: true,
+    userType: true,
     avatarUrl: true,
     isArchived: true,
     createdAt: true,
@@ -38,17 +39,13 @@ export class UsersService {
       const salt = await bcrypt.genSalt(10);
       const password = await bcrypt.hash(createUserDto.password, salt);
 
-      const { roleId, avatarUrl, ...userData } = createUserDto;
+      const { userType,avatarUrl, ...userData } = createUserDto;
       const newUser = await this.prismaService.user.create({
         data: {
           ...userData,
           password: password,
           ...(avatarUrl && { avatarUrl }),
-          role: {
-            connect: {
-              id: roleId,
-            },
-          },
+          userType: userType || UserType.USER,
         },
         select: this.userPublicSelect,
       });
@@ -70,12 +67,6 @@ export class UsersService {
         },
         select: {
           ...this.userPublicSelect,
-          role: {
-            select: {
-              id: true,
-              name: true,
-            }
-          }
         }
       });
       return allUsers;
@@ -111,7 +102,7 @@ export class UsersService {
         await this.isUsernameTaken(updateUserDto.username);
       }
 
-      const { roleId, removeAvatar, ...userData } = updateUserDto;
+      const { removeAvatar, ...userData } = updateUserDto;
 
       const updatedUser = await this.prismaService.$transaction(async (tx) => {
         if (updateUserDto.removeAvatar && existingUser.avatarUrl) {
@@ -130,11 +121,6 @@ export class UsersService {
           where: { id },
           data: {
             ...userData,
-            ...(roleId && {
-              role: {
-                connect: { id: roleId }
-              },
-            }),
           },
           select: this.userPublicSelect
         });
