@@ -1,7 +1,7 @@
-export interface Role {
-    id: string;
-    name: string;
-}
+export type UserType = {
+  ADMIN: 'ADMIN';
+  USER: 'USER';
+};
 
 export interface User {
   id: string;
@@ -10,7 +10,7 @@ export interface User {
   name: string;
   bio: string | null;
   avatarUrl: string | null;
-  role: Role;
+  userType: UserType;
   isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
