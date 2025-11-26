@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCreateUserMutation } from "@/lib/api/mutations/userMutations";
 import { userFormSchema } from "@/lib/schema/user-form-schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SubmitHandler, useForm } from "react-hook-form";
@@ -20,6 +21,9 @@ import * as z from "zod";
 type UserSignupForm = z.infer<typeof userFormSchema>;
 
 export function SignupForm() {
+
+  const createUserMutation = useCreateUserMutation();
+
   const { register, handleSubmit, formState: { isSubmitting, errors}} = useForm<UserSignupForm>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
@@ -35,6 +39,14 @@ export function SignupForm() {
   const onSubmit: SubmitHandler<UserSignupForm> = async (data) => {
     await new Promise ((resolve) => setTimeout(resolve, 1000))
     console.log(data);
+    await createUserMutation.mutateAsync(data, {
+      onSuccess: () => {
+        console.log("creation success")
+      },
+      onError: () => {
+        console.log("creation failed")
+      }
+    })
   };
 
   return (
@@ -48,9 +60,6 @@ export function SignupForm() {
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="flex flex-col gap-6">
-            <div>
-              
-            </div>
             <div className="grid gap-2">
               <div className="flex items-center">
                 <Label htmlFor="username">Username</Label>
