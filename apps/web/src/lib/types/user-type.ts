@@ -15,3 +15,12 @@ export interface User {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export type CreateUserRequests = {
+  username: string;
+  name: string;
+  email: string;
+  password: string;
+  bio?: string;
+  avatarUrl?: string;
+};
