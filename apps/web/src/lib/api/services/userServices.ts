@@ -36,7 +36,14 @@ export const createUsers = async (userData: CreateUserRequests) => {
     });
 
     if (!response.ok) {
-        throw new Error("User creation failed");
+        let errorMessage = "User creation failed";
+        try {
+            const errorData = await response.json();
+            if (errorData.message) {
+                errorMessage = errorData.message;
+            }
+        } catch {}
+        throw new Error(errorMessage);
     }
     
     const data = await response.json();

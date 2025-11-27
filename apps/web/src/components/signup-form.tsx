@@ -17,14 +17,15 @@ import { userFormSchema } from "@/lib/schema/user-form-schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SubmitHandler, useForm } from "react-hook-form";
 import * as z from "zod";
+import { useRouter } from "next/navigation";
 
 type UserSignupForm = z.infer<typeof userFormSchema>;
 
 export function SignupForm() {
-
+  const router = useRouter();
   const createUserMutation = useCreateUserMutation();
 
-  const { register, handleSubmit, formState: { isSubmitting, errors}} = useForm<UserSignupForm>({
+  const { register, handleSubmit, setError, formState: { isSubmitting, errors}} = useForm<UserSignupForm>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
       username: "",
@@ -38,13 +39,18 @@ export function SignupForm() {
 
   const onSubmit: SubmitHandler<UserSignupForm> = async (data) => {
     await new Promise ((resolve) => setTimeout(resolve, 1000))
-    console.log(data);
     await createUserMutation.mutateAsync(data, {
       onSuccess: () => {
         console.log("creation success")
+        console.log("Data: ", data);
+        router.push("/users/home");
       },
-      onError: () => {
-        console.log("creation failed")
+      onError: (error) => {
+        if (error.message.toLowerCase().includes("username")) {
+          setError("username", { message: error.message });
+        } else if (error.message.toLowerCase().includes("email")) {
+          setError("email", { message: error.message });
+        }
       }
     })
   };
